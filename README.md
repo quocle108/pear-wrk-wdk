@@ -67,12 +67,113 @@ The module requires network configurations for all required networks. Configure 
       "spark": {
         "modulePath": "@tetherto/wdk-wallet-spark",
         "networks": ["spark"]
+      },
+      "evmMultisigSafe": {
+        "modulePath": "@tetherto/wdk-protocol-multisig-safe",
+        "networks": ["ethereum-multisig", "polygon-multisig", "arbitrum-multisig", "sepolia-multisig"]
       }
     },
     "requiredNetworks": ["ethereum", "polygon", "arbitrum", "plasma", "sepolia", "spark"]
   }
 }
 ```
+
+## Wallet Modules
+
+### EVM ERC-4337 (`@tetherto/wdk-wallet-evm-erc-4337`)
+
+Single-signature smart contract wallets using ERC-4337 account abstraction.
+
+**Features:**
+- Single owner wallet
+- Gasless transactions via paymasters
+- ERC-4337 UserOperations
+
+**Networks:** `ethereum`, `polygon`, `arbitrum`, `plasma`, `sepolia`
+
+**Example Config:**
+```json
+{
+  "ethereum": {
+    "chainId": 1,
+    "provider": "https://rpc.example.com",
+    "bundlerUrl": "https://bundler.example.com",
+    "paymasterUrl": "https://paymaster.example.com",
+    "paymasterAddress": "0x...",
+    "paymasterToken": { "address": "0x..." }
+  }
+}
+```
+
+### Multisig Safe (`@tetherto/wdk-protocol-multisig-safe`)
+
+Multi-signature wallets using Safe Protocol (formerly Gnosis Safe) with ERC-4337 account abstraction.
+
+**Features:**
+- Multi-owner wallets (M-of-N signatures required)
+- Propose/Approve/Execute transaction flow
+- Owner management (add, remove, swap owners)
+- Threshold management
+- Message signing (EIP-191/EIP-1271)
+- Gasless transactions via paymasters or sponsored mode
+
+**Networks:** `ethereum-multisig`, `polygon-multisig`, `arbitrum-multisig`, `sepolia-multisig`
+
+**Example Config:**
+```json
+{
+  "sepolia-multisig": {
+    "chainId": 11155111,
+    "provider": "https://ethereum-sepolia-rpc.publicnode.com",
+    "bundlerUrl": "https://api.pimlico.io/v2/11155111/rpc?apikey=YOUR_KEY",
+    "paymasterOptions": {
+      "paymasterUrl": "https://api.pimlico.io/v2/11155111/rpc?apikey=YOUR_KEY",
+      "paymasterAddress": "0x...",
+      "paymasterTokenAddress": "0x..."
+    },
+    "safeApiKey": "YOUR_SAFE_API_KEY",
+    "options": {
+      "safeAddress": "0x..."
+    }
+  }
+}
+```
+
+**Key Differences from ERC-4337:**
+
+| Feature | ERC-4337 | Multisig Safe |
+|---------|----------|---------------|
+| Owners | Single | Multiple (M-of-N) |
+| Transaction Flow | Direct execution | Propose → Approve → Execute |
+| Network Names | `ethereum`, `polygon` | `ethereum-multisig`, `polygon-multisig` |
+| Config Options | Basic paymaster | `options.safeAddress`, `safeApiKey` |
+
+**Available Methods (via `callMethod`):**
+
+```javascript
+// Query methods
+await callMethod({ methodName: 'getAddress', network: 'sepolia-multisig', accountIndex: 0 })
+await callMethod({ methodName: 'getOwners', network: 'sepolia-multisig', accountIndex: 0 })
+await callMethod({ methodName: 'getThreshold', network: 'sepolia-multisig', accountIndex: 0 })
+await callMethod({ methodName: 'getBalance', network: 'sepolia-multisig', accountIndex: 0 })
+await callMethod({ methodName: 'isDeployed', network: 'sepolia-multisig', accountIndex: 0 })
+
+// Transaction methods
+await callMethod({ methodName: 'propose', network: 'sepolia-multisig', accountIndex: 0, args: JSON.stringify({ to, value, data }) })
+await callMethod({ methodName: 'approve', network: 'sepolia-multisig', accountIndex: 0, args: JSON.stringify({ safeOpHash }) })
+await callMethod({ methodName: 'execute', network: 'sepolia-multisig', accountIndex: 0, args: JSON.stringify({ safeOpHash }) })
+
+// Owner management
+await callMethod({ methodName: 'addOwner', network: 'sepolia-multisig', accountIndex: 0, args: JSON.stringify({ address, threshold }) })
+await callMethod({ methodName: 'removeOwner', network: 'sepolia-multisig', accountIndex: 0, args: JSON.stringify({ address }) })
+await callMethod({ methodName: 'changeThreshold', network: 'sepolia-multisig', accountIndex: 0, args: JSON.stringify({ threshold }) })
+```
+
+### Spark (`@tetherto/wdk-wallet-spark`)
+
+Spark network wallet support.
+
+**Networks:** `spark`
 
 ## API Documentation
 
@@ -320,7 +421,14 @@ LOG_LEVEL=DEBUG node your-script.js
 
 ### Testing
 
-See `test/test-lightning.js` for an example test implementation.
+Example test implementations:
+- `test/test-lightning.js`: Spark/Lightning network integration test
+- `test/test-multisig.js`: Multisig Safe integration test
+
+Run tests with Bare runtime:
+```bash
+bare --imports ./pack.imports.json test/test-multisig.js
+```
 
 ## Dependencies
 
@@ -334,8 +442,9 @@ See `test/test-lightning.js` for an example test implementation.
 
 ### Wallet Modules
 
-- `@tetherto/wdk-wallet-evm-erc-4337`: EVM ERC-4337 wallet support
+- `@tetherto/wdk-wallet-evm-erc-4337`: EVM ERC-4337 single-sig wallet support
 - `@tetherto/wdk-wallet-spark`: Spark network wallet support
+- `@tetherto/wdk-protocol-multisig-safe`: Safe Protocol multisig wallet support
 
 ## License
 
